@@ -38,7 +38,15 @@ public class JalanTercepat {
 
         anneCoordinate = findCoordinate(layout, '^');
         januariCoordinate = findCoordinate(layout, '*');
-        findShortestRoute(anneCoordinate, januariCoordinate, layout);
+        String[] shortestPath = findShortestRoute(anneCoordinate, januariCoordinate, layout);
+        
+        if (shortestPath != null) {
+            for (String step : shortestPath) {
+                System.out.println(step);
+            }
+        } else {
+            System.out.println("Tidak ada jalan.");
+        }
     }
 
     static Integer[] findCoordinate(char[][] layout, char object){
@@ -54,58 +62,89 @@ public class JalanTercepat {
         return output;
     }
 
-    static void findShortestRoute(Integer[] anneCoordinate, Integer[] januariCoordinate, char[][] layout){
-        Integer[] anneCoordinateNow = anneCoordinate;
-        Integer[] januariCoordinateNow = januariCoordinate;
-        Integer[] previousCoordinate = anneCoordinateNow;
-        char[][] layoutNow = layout;
-        Integer stepCount = 0;
+    static int[] rowMoves = {-1, 1, 0, 0};
+    static int[] colMoves = {0, 0, -1, 1};
+    static String[] directions = {"Atas", "Bawah", "Kiri", "Kanan"};
 
-        while (stepCount != 40) {
-            if(layoutNow[anneCoordinateNow[0]][anneCoordinateNow[1]-1] == ' ' && anneCoordinateNow[1]-1 != previousCoordinate[1]){
-                Integer i = anneCoordinateNow[0];
-                Integer j = anneCoordinateNow[1];
-                // layoutNow[i][j+1] = ' ';
-                layoutNow[i][j] = '^';
-                previousCoordinate[1] = anneCoordinateNow[1]-1;
-                stepCount++;
-                printLayout(layoutNow, stepCount);
+    static String[] findShortestRoute(Integer[] start, Integer[] end, char[][] layout) {
+        int n = layout.length;
+        int m = layout[0].length;
+        boolean[][] visited = new boolean[n][m];
+        int[][] directionGrid = new int[n][m];
+        Point[] queue = new Point[n * m];
+        int front = 0, rear = 0;
+        
+        queue[rear++] = new Point(start[0], start[1], 0);  // Masukkan titik awal ke antrian
+        visited[start[0]][start[1]] = true;
+    
+        while (front < rear) {  // Loop berjalan selama ada elemen dalam antrian
+            Point point = queue[front++];  // Ambil titik dari depan antrian
+            if (point.x == end[0] && point.y == end[1]) {
+                return constructPath(start, end, directionGrid, directions);  // Jika titik tujuan ditemukan, konstruksi jalur
             }
-            if(layoutNow[anneCoordinateNow[0]][anneCoordinateNow[1]+1] == ' ' && anneCoordinateNow[1]+1 != previousCoordinate[1]){
-                Integer i = anneCoordinateNow[0];
-                Integer j = anneCoordinateNow[1];
-                // layoutNow[i][j-1] = ' ';
-                layoutNow[i][j] = '^';
-                previousCoordinate[1] = anneCoordinateNow[1]+1;
-                stepCount++;
-                printLayout(layoutNow, stepCount);
-            }
-            if(layoutNow[anneCoordinateNow[0]-1][anneCoordinateNow[1]] == ' ' && anneCoordinateNow[0]-1 != previousCoordinate[0]){
-                Integer i = anneCoordinateNow[0];
-                Integer j = anneCoordinateNow[1];
-                // layoutNow[i+1][j] = ' ';
-                layoutNow[i][j] = '^';
-                previousCoordinate[0] = anneCoordinateNow[0]-1;
-                stepCount++;
-                printLayout(layoutNow, stepCount);
-            }
-            if(layoutNow[anneCoordinateNow[0]+1][anneCoordinateNow[1]] == ' ' && anneCoordinateNow[0]+1 != previousCoordinate[0]){
-                Integer i = anneCoordinateNow[0];
-                Integer j = anneCoordinateNow[1];
-                // layoutNow[i-1][j] = ' ';
-                layoutNow[i][j] = '^';
-                previousCoordinate[0] = anneCoordinateNow[0]+1;
-                stepCount++;
-                printLayout(layoutNow, stepCount);
+    
+            for (int i = 0; i < 4; i++) {  // Periksa semua kemungkinan gerakan (atas, bawah, kiri, kanan)
+                int newRow = point.x + rowMoves[i];
+                int newCol = point.y + colMoves[i];
+    
+                if (isValidMove(newRow, newCol, n, m, layout, visited)) {
+                    queue[rear++] = new Point(newRow, newCol, point.dist + 1);  // Masukkan titik baru ke antrian
+                    visited[newRow][newCol] = true;
+                    directionGrid[newRow][newCol] = i;
+                }
             }
         }
+        return null; // Tidak ada jalur yang ditemukan
     }
 
-    static void printLayout(char[][] layout, Integer stepCount){
-        System.out.println();
-        System.out.println("Step: " + stepCount);
-        for (char[] output : layout) {
-            System.out.println(output);
+    static boolean isValidMove(int x, int y, int n, int m, char[][] layout, boolean[][] visited) {
+        return x >= 0 && x < n && y >= 0 && y < m && layout[x][y] != '#' && !visited[x][y];
+    }
+
+    static String[] constructPath(Integer[] start, Integer[] end, int[][] directionGrid, String[] directions) {
+        String[] path = new String[100];
+        int pathLength = 0;
+        int x = end[0];
+        int y = end[1];
+        int direction = directionGrid[x][y];
+        int stepCount = 0;
+
+        while (x != start[0] || y != start[1]) {
+            int newDirection = directionGrid[x][y];
+            if (newDirection == direction) {
+                stepCount++;
+            } else {
+                path[pathLength++] = directions[direction] + " " + stepCount + " langkah";
+                stepCount = 1;
+                direction = newDirection;
+            }
+
+            if (direction == 0) {
+                x++;
+            } else if (direction == 1) {
+                x--;
+            } else if (direction == 2) {
+                y++;
+            } else if (direction == 3) {
+                y--;
+            }
+        }
+        path[pathLength++] = directions[direction] + " " + stepCount + " langkah";
+        
+        String[] result = new String[pathLength];
+        for (int i = 0; i < pathLength; i++) {
+            result[i] = path[pathLength - i - 1];
+        }
+        return result;
+    }
+
+    static class Point {
+        int x, y, dist;
+
+        Point(int x, int y, int dist) {
+            this.x = x;
+            this.y = y;
+            this.dist = dist;
         }
     }
 }
